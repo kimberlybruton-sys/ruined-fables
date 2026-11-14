@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Ruined Fables: The Villain Scroll</title>
+<style>
+  :root{
+    --bg:#b30000;
+    --parchment:#f7e6c7;
+    --parchment-dark:#e8d1a6;
+    --ink:#222;
+    --accent:#b58a20;
+    --scroll-width:760px;
+    --scroll-height:520px;
+    --radius:28px;
+  }
+  html,body{height:100%;margin:0;font-family: Georgia, "Times New Roman", serif;background:var(--bg);color:var(--ink);box-sizing:border-box;}
+  /* Reserve space so the fixed control bar doesn't overlap the scroll */
+  body{padding-top:118px;}
+
+  .wrap{
+    min-height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:40px;
+    box-sizing:border-box;
+  }
+
+  /* Scroll container */
+  .scroll{
+    position:relative;
+    width:var(--scroll-width);
+    max-width:92vw;
+    height:var(--scroll-height);
+    max-height:86vh;
+    background: linear-gradient(180deg, var(--parchment) 0%, var(--parchment-dark) 100%);
+    border-radius: var(--radius);
+    box-shadow:
+      0 30px 60px rgba(0,0,0,0.35),
+      inset 0 1px 0 rgba(255,255,255,0.4),
+      inset 0 -20px 30px rgba(0,0,0,0.06);
+    padding:46px 56px;
+    box-sizing:border-box;
+    overflow:auto;
+    border:6px solid rgba(0,0,0,0.06);
+  }
+
+  .scroll:before, .scroll:after{
+    content:'';
+    position:absolute;
+    left:50%;
+    transform:translateX(-50%);
+    width:calc(100% + 120px);
+    height:40px;
+    background:linear-gradient(90deg,#8a5a1a,#d2a44a 50%, #8a5a1a);
+    border-radius:20px;
+    box-shadow:0 6px 14px rgba(0,0,0,0.35);
+    z-index:3;
+  }
+  .scroll:before{ top:-30px; }
+  .scroll:after{ bottom:-30px; }
+
+  .crown{
+    position:absolute;
+    top:-70px;
+    left:50%;
+    transform:translateX(-50%);
+    width:140px;
+    height:40px;
+    z-index:4;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--accent);
+    font-size:30px;
+    text-shadow:0 2px 0 rgba(255,255,255,0.35);
+  }
+
+  .title{
+    text-align:center;
+    font-weight:bold;
+    font-size:20px;
+    color:#2e1500;
+    margin-bottom:12px;
+    letter-spacing:0.6px;
+  }
+
+  .subtitle{
+    text-align:center;
+    font-size:13px;
+    color:#3b2107;
+    margin-bottom:20px;
+    opacity:0.9;
+  }
+
+  .story{
+    font-size:18px;
+    line-height:1.6;
+    color:#221810;
+    white-space:pre-wrap;
+  }
+  .story strong{font-weight:900;color:#111;}
+
+  /* Controls bar: wider & shorter; columns meet near center */
+  .controls{
+    position:fixed;
+    top:12px;
+    left:50%;
+    transform:translateX(-50%);
+    width:90vw;
+    max-width:1100px;
+    background:rgba(255,255,255,0.97);
+    border-radius:12px;
+    padding:8px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.28);
+    z-index:60;
+    font-family: Arial, Helvetica, sans-serif;
+    display:flex;
+    gap:6px;               /* smaller gap so columns meet closer */
+    align-items:center;
+    border:1px solid rgba(0,0,0,0.06);
+    box-sizing:border-box;
+  }
+
+  /* Force exact 50/50 split so they meet at center */
+  .controls .col{flex:0 0 50%;display:flex;flex-direction:column;gap:6px;justify-content:center;}
+  .controls .col.left{align-items:flex-start;text-align:left;padding-right:6px;}
+  .controls .col.right{align-items:flex-start;text-align:left;padding-left:6px;} /* left-align the label for the dropdown */
+
+  /* Label font size requested */
+  .controls label{display:block;font-size:22px;color:#333;margin:0 0 4px 0;font-weight:700;}
+
+  /* Villain name input: maxlength remains 40 and now 24px font as requested */
+  #name{
+    width:100%;
+    box-sizing:border-box;
+    padding:6px 10px;
+    border-radius:8px;
+    border:1px solid #cfcfcf;
+    font-size:24px;               /* updated font size for fields */
+    line-height:1.1;
+    height:46px;
+    max-width:100%;
+    outline:none;
+  }
+
+  /* Dropdown: reduced width by ~8ch so it won't stick off the right side; field font size 24px */
+  #tale{
+    padding:8px 10px;
+    border-radius:8px;
+    border:1px solid #cfcfcf;
+    font-size:24px;               /* updated font size for fields */
+    min-width:calc(24ch + 12ch);  /* reduced by ~8ch versus previous */
+    width:100%;
+    max-width:440px;              /* tightened to avoid overflow */
+    height:46px;
+    box-sizing:border-box;
+  }
+
+  .buttons{display:flex;gap:8px;margin-top:6px;justify-content:flex-end;}
+  .controls button{
+    padding:8px 12px;
+    border-radius:8px;
+    border:0;
+    cursor:pointer;
+    font-weight:700;
+    font-size:14px;
+    height:36px;
+    min-width:100px;
+  }
+  .btn-ruin{background:#b30000;color:#fff;}
+  .btn-random{background:#ffd27a;color:#5a3500;}
+
+  .preview{
+    font-size:24px;               /* preview follows field size requirement */
+    color:#5a3b00;
+    background:linear-gradient(90deg, rgba(181,138,32,0.06), rgba(0,0,0,0.0));
+    padding:6px 8px;border-radius:8px;border:1px dashed rgba(0,0,0,0.06);
+    display:inline-block;
+    margin-top:2px;
+    line-height:1.1;
+  }
+  /* Make the embellished preview's bold name match 24px */
+  .preview .embell{font-weight:700;color:#2b1600;display:inline-block;}
+  .preview .embell strong{font-size:24px;line-height:1.1;}
+
+  @media (max-width:840px){
+    /* Stack controls on small screens */
+    .controls{flex-direction:column;padding:10px;}
+    .controls .col{flex:1;width:100%;align-items:stretch;text-align:left;padding:0;}
+    .controls .col.right{align-items:stretch;text-align:left;padding:0;}
+    .buttons{justify-content:flex-start;}
+    body{padding-top:160px;}
+  }
+</style>
+</head>
+<body>
+<div class="controls" aria-label="Generator controls">
+  <div class="col left" aria-hidden="false">
+    <label for="name">Enter your name (villain):</label>
+    <!-- maxlength set to 40 characters as requested -->
+    <input id="name" type="text" maxlength="40" placeholder="e.g. Mordecai, Tammy, Theodore..." autocomplete="off" />
+    <div id="preview" class="preview" aria-hidden="true">
+      <span class="embell" id="embellHtml">✦ <strong>The Villain</strong> ✦</span>
+    </div>
+  </div>
+
+  <div class="col right">
+    <label for="tale">Choose a fable to ruin:</label>
+    <select id="tale" aria-label="Choose tale">
+      <option>Hansel &amp; Gretel</option>
+      <option>Little Red Riding Hood</option>
+      <option>The Three Little Pigs</option>
+      <option>Cinderella</option>
+      <option>Jack and the Beanstalk</option>
+      <option>Goldilocks</option>
+      <option>Snow White</option>
+      <option>Rapunzel</option>
+      <option>Sleeping Beauty</option>
+      <option>The Tortoise and the Hare</option>
+    </select>
+    <div class="buttons">
+      <button id="ruin" class="btn-ruin">Ruin it!</button>
+      <button id="random" class="btn-random" title="Surprise me">Surprise</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap" role="main">
+  <div class="scroll" aria-live="polite">
+    <div class="crown" aria-hidden="true">♛</div>
+    <div class="title">The Royal Record of Ruin</div>
+    <div class="subtitle">An antique summary, sarcastically preserved</div>
+    <div id="story" class="story">
+      Enter a name and press "Ruin it!" to see the scroll unfurl.
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // Escape helper
+  function esc(s){
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  // Embellishment parts
+  const ornaments = ["✦","✧","✵","❦","❖","✺","✷","✶","✸"];
+  const prefixes = ["Lord","Lady","Baron","Dame","Sir","Madame","Count","Countess","Archon","Master","Mistress"];
+  const epithets = ["the Irksome","the Unruly","the Pernicious","the Boor","the Smug","the Calculating","the Merciless","the Haughty","the Inconsiderate","the Unrepentant"];
+
+  function rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+  function chance(p){ return Math.random() < p; }
+
+  function makeEmbellished(raw){
+    const trimmed = String(raw || '').trim();
+    const base = trimmed === '' ? 'The Villain' : trimmed;
+    const safe = esc(base);
+    const bold = '<strong>' + safe + '</strong>';
+
+    const leftOrn = rand(ornaments);
+    const rightOrn = rand(ornaments);
+    const usePrefix = chance(0.35);
+    const useEpithet = chance(0.45);
+    const prefix = usePrefix ? (rand(prefixes) + ' ') : '';
+    const epithet = useEpithet ? (' ' + rand(epithets)) : '';
+
+    // Only the actual name is bolded to satisfy the requirement
+    const embellished = '<span aria-hidden="true">' + leftOrn + ' </span>' +
+                        '<span class="titlepart">' + esc(prefix) + '</span>' +
+                        bold +
+                        '<span class="epit">' + esc(epithet) + '</span>' +
+                        '<span aria-hidden="true"> ' + rightOrn + '</span>';
+    return { html: embellished, boldOnly: bold };
+  }
+
+  // Tale templates
+  const TALES = {
+    "Hansel & Gretel":[
+      "{name} convinced two kids that breadcrumb navigation is a viable survival strategy.",
+      "{name} then arranged a house made of sweets because subtlety is obviously overrated.",
+      "{name} watched as the witch's hospitality was confused for a career choice.",
+      "{name} suggested a dietary intervention that happened to involve an oven.",
+      "{name} took the shiny trinkets while pretending to be helpful with directions.",
+      "{name} shrugged off forest consequences like it was a minor inconvenience.",
+      "{name} left the siblings with a story and questionable trust issues"
+    ],
+    "Little Red Riding Hood":[
+      "{name} dressed a child in a red target and called it fashion bravery.",
+      "{name} instructed a wolf in impersonation, because why not outsource deception?",
+      "{name} applauded the wolf's audition for 'grandma' with zero concern for truth.",
+      "{name} enjoyed the moment the plan veered from cunning to theatrical carnage.",
+      "{name} exaggerated the dangers of strangers while being the one who hired them.",
+      "{name} stood by as the rescue turned into a messy public relations problem.",
+      "{name} left everyone slightly wiser and significantly more suspicious of capes"
+    ],
+    "The Three Little Pigs":[
+      "{name} treated homebuilding like a fast-food franchise of poor decisions.",
+      "{name} advised on materials with all the subtlety of a demolition expert.",
+      "{name} celebrated when the wolf performed a little structural audit.",
+      "{name} cheered the pig who chose bricks while mocking the others' weekend projects.",
+      "{name} turned an architectural lesson into a morale-boosting disaster.",
+      "{name} billed it as natural selection and handed out sardonic award ribbons.",
+      "{name} exited with a smirk as everyone reconsidered their contractor choices"
+    ],
+    "Cinderella":[
+      "{name} insisted that midnight curfews were dramatic and ripe for exploitation.",
+      "{name} orchestrated footwear logistics like a petty tyrant with a shoe fetish.",
+      "{name} turned a pumpkin into PR collateral and called it transformative branding.",
+      "{name} watched the prince practice 'soulmate panic' while sipping metaphorical tea.",
+      "{name} undermined household harmony with unsolicited life coaching and insults.",
+      "{name} arranged a lost-shoe mystery because chaos feeds a bored overlord.",
+      "{name} took the bow in the end for impeccable timing and terrible taste"
+    ],
+    "Jack and the Beanstalk":[
+      "{name} sold magical seeds with the flair of a shady startup founder.",
+      "{name} told a boy that climbing unpaid ladders to riches was a growth strategy.",
+      "{name} cheered from below as the giant's assets became a target for hustle.",
+      "{name} rewrote property rights with the subtlety of a bandit in a suit.",
+      "{name} justified every burglary with motivational phrases and a wink.",
+      "{name} kept the coins and the stories, leaving ethics as an abstract concept.",
+      "{name} left the beanstalk sagging and reputations even more so"
+    ],
+    "Goldilocks":[
+      "{name} promoted break-ins as a taste-testing career move.",
+      "{name} applauded the audacity of snooping through other people's porridge.",
+      "{name} suggested chair trials as a personality assessment tool.",
+      "{name} found the bear family's boundary-setting tragically naive.",
+      "{name} turned a sleepy trespass into a reputation management crisis.",
+      "{name} blamed the homeowners for not fortifying their porridge properly.",
+      "{name} sanitized the scandal into a cautionary tale and a chuckle"
+    ],
+    "Snow White":[
+      "{name} praised vanity as a competitive sport and a recruitment tool.",
+      "{name} gave a poisonous apples-for-feedback program a thumbs-up.",
+      "{name} enjoyed the court drama where mirrors spoke more truth than advisors.",
+      "{name} outsourced murder attempts with a flair for melodrama.",
+      "{name} turned exile into character development and collected the moral high ground.",
+      "{name} funded a chest of grudges and called it proactive governance.",
+      "{name} watched the kingdom rewrite its HR policies with smug satisfaction"
+    ],
+    "Rapunzel":[
+      "{name} treated a tower as a branding exercise in dramatic isolation.",
+      "{name} advised on hair logistics like a monopolist of inconvenient resources.",
+      "{name} marketed rescue attempts as ephemeral romance adventures.",
+      "{name} turned a braid into a theatrical prop and an emotional lever.",
+      "{name} watched visitors add the tower to their misguided bucket lists.",
+      "{name} brokered freedom deals that read oddly in hindsight.",
+      "{name} signed off with a flourish as the exit strategy unfolded"
+    ],
+    "Sleeping Beauty":[
+      "{name} praised naptime as an extreme long-term tactic.",
+      "{name} arranged curses like surprise party favors with dreadful timing.",
+      "{name} treated awakening as a scheduling conflict to be resolved later.",
+      "{name} watched princes practice dramatic kisses like a theater troupe.",
+      "{name} valued inconvenience as character-building literature.",
+      "{name} called the whole affair a lesson in punctuality and poor planning.",
+      "{name} filed the incident under 'avoidable follies' with a satisfied nod"
+    ],
+    "The Tortoise and the Hare":[
+      "{name} bet on speed and then rooted for the chaos it invited.",
+      "{name} applauded the hare's hubris like front-row theater seats to failure.",
+      "{name} encouraged shortcuts while keeping a stopwatch and popcorn.",
+      "{name} framed steady effort as boring and somehow scandalous.",
+      "{name} cheered louder when the hare learned humility the slow way.",
+      "{name} monetized the moral by selling motivational slogans afterwards.",
+      "{name} left the finish line smelling faintly of smugness"
+    ]
+  };
+
+  // DOM
+  const nameInput = document.getElementById('name');
+  const taleSelect = document.getElementById('tale');
+  const ruinBtn = document.getElementById('ruin');
+  const randomBtn = document.getElementById('random');
+  const storyEl = document.getElementById('story');
+  const embellDiv = document.getElementById('embellHtml');
+
+  function randChoice(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+  function generate(nameRaw, taleKey){
+    const emb = makeEmbellished(nameRaw);
+    const embellishedHTML = emb.html;
+    const templates = TALES[taleKey] || TALES["Hansel & Gretel"];
+
+    const totalSentences = Math.floor(Math.random() * 4) + 5; // 5..8
+    const needed = totalSentences - 1;
+    const take = Math.min(needed, templates.length);
+    const chosen = templates.slice(0, take);
+
+    const sentences = chosen.map(t => {
+      let s = t.replace(/\{name\}/g, embellishedHTML).trim();
+      if (!/[.!?]$/.test(s)) s += '.';
+      return s;
+    });
+
+    const finalTemplates = [
+      "{name} shrugged, and they all lived happily ever after.",
+      "{name} smirked at the mess, and they all lived happily ever after.",
+      "{name} took a bow for the chaos, and they all lived happily ever after.",
+      "{name} counted the spoils, and they all lived happily ever after.",
+      "{name} walked away satisfied, and they all lived happily ever after.",
+      "{name} polished their reputation, and they all lived happily ever after.",
+      "{name} filed the whole thing under 'lessons', and they all lived happily ever after."
+    ];
+    const phrase = 'and they all lived happily ever after.';
+    let finalTemplate = randChoice(finalTemplates);
+    let finalSentence = finalTemplate.replace(/\{name\}/g, embellishedHTML).trim();
+    if (!finalSentence.toLowerCase().endsWith(phrase)){
+      finalSentence = finalSentence.replace(/[.!?]*$/,'').replace(/,?\s*and they all lived happily ever after\.?$/i,'') + ' ' + phrase;
+    }
+    sentences.push(finalSentence);
+
+    return sentences.join(' ');
+  }
+
+  function updatePreview(){
+    const val = nameInput.value;
+    const emb = makeEmbellished(val);
+    embellDiv.innerHTML = emb.html;
+    if (!String(val||'').trim()){
+      embellDiv.innerHTML = '✦ <strong>The Villain</strong> ✦';
+    }
+  }
+
+  function render(){
+    const nameVal = nameInput.value;
+    const tale = taleSelect.value;
+    const html = generate(nameVal, tale);
+    storyEl.innerHTML = html;
+    document.querySelector('.scroll').scrollTop = 0;
+  }
+
+  const sampleNames = ["Mordecai", "Tamsin", "Baron Vex", "Darla", "Oswin", "Vinnie", "Rowena", "Gideon", "Ursula", "Felix"];
+  function surprise(){
+    const rName = randChoice(sampleNames);
+    const tales = Object.keys(TALES);
+    const t = randChoice(tales);
+    nameInput.value = rName;
+    taleSelect.value = t;
+    updatePreview();
+    render();
+  }
+
+  // Events
+  ruinBtn.addEventListener('click', function(e){ e.preventDefault(); render(); });
+  randomBtn.addEventListener('click', function(e){ e.preventDefault(); surprise(); });
+  nameInput.addEventListener('input', updatePreview);
+  nameInput.addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); render(); } });
+
+  // Init
+  nameInput.value = '';
+  taleSelect.value = 'Hansel & Gretel';
+  updatePreview();
+
+})();
+</script>
+</body>
+</html>
